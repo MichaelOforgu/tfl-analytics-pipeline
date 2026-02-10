@@ -1,0 +1,30 @@
+{
+  "dev": {
+    "storage": {
+      "account_name": "sttfldevi7eucd5ne5qf4",
+      "container_landing": "landing",
+      "container_bronze": "bronze",
+      "container_silver": "silver",
+      "container_gold": "gold",
+      "container_checkpoints": "checkpoints"
+    },
+    "databricks": {
+      "catalog_name": "tfl_dev",
+      "storage_credential": "dev_adls_credential",
+    }
+  },
+  "prod": {
+    "storage": {
+      "account_name": "",
+      "container_landing": "landing",
+      "container_bronze": "bronze",
+      "container_silver": "silver",
+      "container_gold": "gold",
+      "container_checkpoints": "checkpoints"
+    },
+    "databricks": {
+      "catalog_name": "tfl_prod",
+      "storage_credential": "prod_adls_credential",
+    }
+  }
+}
