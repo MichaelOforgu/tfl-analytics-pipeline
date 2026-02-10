@@ -14,7 +14,7 @@
 			"location": {
 				"type": "AzureBlobFSLocation",
 				"fileName": "line_status.json",
-				"folderPath": "tfl_lines",
+				"folderPath": "lines",
 				"fileSystem": "landing"
 			}
 		},

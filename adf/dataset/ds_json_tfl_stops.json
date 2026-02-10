@@ -22,7 +22,7 @@
 					"value": "stop_points_page_@{dataset().page}.json",
 					"type": "Expression"
 				},
-				"folderPath": "tfl_stops",
+				"folderPath": "stops",
 				"fileSystem": "landing"
 			}
 		},

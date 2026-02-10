@@ -30,7 +30,7 @@
 					"type": "Expression"
 				},
 				"folderPath": {
-					"value": "tfl_arrivals/@{dataset().ingestDate}/@{dataset().hour}",
+					"value": "arrivals/@{dataset().ingestDate}/@{dataset().hour}",
 					"type": "Expression"
 				},
 				"fileSystem": "landing"
