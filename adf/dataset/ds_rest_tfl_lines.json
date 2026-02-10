@@ -1,0 +1,19 @@
+{
+	"name": "ds_rest_tfl_lines",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_rest_tfl_api",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Source datasets"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": "Line/Mode/bus/Status"
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

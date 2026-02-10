@@ -1,0 +1,22 @@
+{
+	"name": "pl_error_handler",
+	"properties": {
+		"activities": [
+			{
+				"name": "WaitErrorLog",
+				"type": "Wait",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"waitTimeInSeconds": 1
+				}
+			}
+		],
+		"folder": {
+			"name": "child_pipelines"
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-02-09T13:34:13Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
