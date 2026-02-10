@@ -1,0 +1,27 @@
+{
+	"name": "ds_rest_tfl_stops",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_rest_tfl_api",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"page": {
+				"type": "int"
+			}
+		},
+		"folder": {
+			"name": "Source datasets"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": {
+				"value": "StopPoint/Mode/bus?page=@{dataset().page}",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,42 @@
+{
+	"name": "ds_json_tfl_arrivals",
+	"properties": {
+		"description": "bus_route_1_arrivals_2026-02-09_14-00-00.json",
+		"linkedServiceName": {
+			"referenceName": "ls_adls_analytics",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"ingestDate": {
+				"type": "string"
+			},
+			"hour": {
+				"type": "string"
+			},
+			"busId": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Sink datasets"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "bus_line_@{dataset().busId}_arrivals_@{dataset().ingestDate}_@{dataset().hour}.json",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "tfl_arrivals/@{dataset().ingestDate}/@{dataset().hour}",
+					"type": "Expression"
+				},
+				"fileSystem": "landing"
+			}
+		},
+		"schema": {}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

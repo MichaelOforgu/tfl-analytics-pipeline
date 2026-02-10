@@ -1,0 +1,190 @@
+{
+	"name": "pl_ingest_tfl_line_and_stops_daily",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy_BusLines_To_ADLS_Landing",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "RestSource",
+						"httpRequestTimeout": "00:01:40",
+						"requestInterval": "00.00:00:00.010",
+						"requestMethod": "GET",
+						"paginationRules": {
+							"supportRFC5988": "true"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_rest_tfl_lines",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_json_tfl_lines",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "ForEach_Stop_Page",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@range(1, add(pipeline().parameters.maxPage, 1))",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Copy_StopPoints_To_ADLS_Landing",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "RestSource",
+									"httpRequestTimeout": "00:01:40",
+									"requestInterval": "00.00:00:00.010",
+									"requestMethod": "GET",
+									"paginationRules": {
+										"supportRFC5988": "true"
+									}
+								},
+								"sink": {
+									"type": "JsonSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "JsonWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_rest_tfl_stops",
+									"type": "DatasetReference",
+									"parameters": {
+										"page": {
+											"value": "@item()",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_json_tfl_stops",
+									"type": "DatasetReference",
+									"parameters": {
+										"page": {
+											"value": "@item()",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Handle_StopPoints_Failure",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Copy_StopPoints_To_ADLS_Landing",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_error_handler",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Handle_BusLines_Failure",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ForEach_Stop_Page",
+						"dependencyConditions": [
+							"Failed"
+						]
+					},
+					{
+						"activity": "Copy_BusLines_To_ADLS_Landing",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_error_handler",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"parameters": {
+			"maxPage": {
+				"type": "int",
+				"defaultValue": 2
+			}
+		},
+		"folder": {
+			"name": "child_pipelines"
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-02-09T16:16:27Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

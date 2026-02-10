@@ -1,0 +1,79 @@
+{
+	"name": "exec_pl_tfl_to_landing_ingest",
+	"properties": {
+		"activities": [
+			{
+				"name": "pl_ingest_tfl_arrivals_hourly",
+				"description": "Hourly ingestion of TFL arrivals data",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ingest_tfl_lines_and_stops_daily",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ingest_tfl_arrivals_hourly",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_ingest_tfl_lines_and_stops_daily",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_ingest_tfl_line_and_stops_daily",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_error_handler_tfl_ingest",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_ingest_tfl_arrivals_hourly",
+						"dependencyConditions": [
+							"Failed"
+						]
+					},
+					{
+						"activity": "pl_ingest_tfl_lines_and_stops_daily",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_error_handler",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2026-02-09T16:12:12Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
