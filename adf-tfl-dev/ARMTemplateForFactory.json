@@ -1,0 +1,772 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "adf-tfl-dev"
+		},
+		"ls_adls_analytics_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'ls_adls_analytics'"
+		},
+		"ls_adls_analytics_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://sttfldevi7eucd5ne5qf4.dfs.core.windows.net/"
+		},
+		"ls_rest_tfl_api_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://api.tfl.gov.uk"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/exec_pl_tfl_to_landing_ingest')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "pl_ingest_tfl_arrivals_hourly",
+						"description": "Hourly ingestion of TFL arrivals data",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ingest_tfl_lines_and_stops_daily",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ingest_tfl_arrivals_hourly",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_ingest_tfl_lines_and_stops_daily",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_ingest_tfl_line_and_stops_daily",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "pl_error_handler_tfl_ingest",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "pl_ingest_tfl_arrivals_hourly",
+								"dependencyConditions": [
+									"Failed"
+								]
+							},
+							{
+								"activity": "pl_ingest_tfl_lines_and_stops_daily",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_error_handler",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-02-09T16:12:12Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_ingest_tfl_arrivals_hourly')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_ingest_tfl_line_and_stops_daily')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_error_handler')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_error_handler')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "WaitErrorLog",
+						"type": "Wait",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"waitTimeInSeconds": 1
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "child_pipelines"
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-02-09T13:34:13Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_ingest_tfl_arrivals_hourly')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "ForEach_BusArrivals",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Fetch_LineId",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@take(activity('Fetch_LineId').output.value, 50)\n",
+								"type": "Expression"
+							},
+							"isSequential": false,
+							"batchCount": 5,
+							"activities": [
+								{
+									"name": "Copy_BusArrivals_To_ADLS_Landing",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "RestSource",
+											"httpRequestTimeout": "00:01:40",
+											"requestInterval": "00.00:00:00.010",
+											"requestMethod": "GET",
+											"paginationRules": {
+												"supportRFC5988": "true"
+											}
+										},
+										"sink": {
+											"type": "JsonSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "JsonWriteSettings"
+											}
+										},
+										"enableStaging": false
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_rest_tfl_arrivals",
+											"type": "DatasetReference",
+											"parameters": {
+												"busId": "@item().id"
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_json_tfl_arrivals",
+											"type": "DatasetReference",
+											"parameters": {
+												"ingestDate": {
+													"value": "@formatDateTime(utcNow(), 'yyyy-MM-dd')",
+													"type": "Expression"
+												},
+												"hour": {
+													"value": "@formatDateTime(utcNow(), 'HH-mm-ss')",
+													"type": "Expression"
+												},
+												"busId": {
+													"value": "@item().id",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Handle_BusArrival_Failure",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "Copy_BusArrivals_To_ADLS_Landing",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pl_error_handler",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {}
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "OnFailure_ForEach",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "ForEach_BusArrivals",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_error_handler",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "Fetch_LineId",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "JsonSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "JsonReadSettings"
+								}
+							},
+							"dataset": {
+								"referenceName": "ds_json_tfl_lines",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"LatestLineStatusFile": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "child_pipelines"
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-02-09T16:12:12Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_error_handler')]",
+				"[concat(variables('factoryId'), '/datasets/ds_json_tfl_lines')]",
+				"[concat(variables('factoryId'), '/datasets/ds_rest_tfl_arrivals')]",
+				"[concat(variables('factoryId'), '/datasets/ds_json_tfl_arrivals')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_ingest_tfl_line_and_stops_daily')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy_BusLines_To_ADLS_Landing",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"supportRFC5988": "true"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_rest_tfl_lines",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_json_tfl_lines",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "ForEach_Stop_Page",
+						"type": "ForEach",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@range(1, add(pipeline().parameters.maxPage, 1))",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "Copy_StopPoints_To_ADLS_Landing",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "RestSource",
+											"httpRequestTimeout": "00:01:40",
+											"requestInterval": "00.00:00:00.010",
+											"requestMethod": "GET",
+											"paginationRules": {
+												"supportRFC5988": "true"
+											}
+										},
+										"sink": {
+											"type": "JsonSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "JsonWriteSettings"
+											}
+										},
+										"enableStaging": false
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_rest_tfl_stops",
+											"type": "DatasetReference",
+											"parameters": {
+												"page": {
+													"value": "@item()",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_json_tfl_stops",
+											"type": "DatasetReference",
+											"parameters": {
+												"page": {
+													"value": "@item()",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Handle_StopPoints_Failure",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "Copy_StopPoints_To_ADLS_Landing",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pl_error_handler",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {}
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Handle_BusLines_Failure",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "ForEach_Stop_Page",
+								"dependencyConditions": [
+									"Failed"
+								]
+							},
+							{
+								"activity": "Copy_BusLines_To_ADLS_Landing",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_error_handler",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"maxPage": {
+						"type": "int",
+						"defaultValue": 2
+					}
+				},
+				"folder": {
+					"name": "child_pipelines"
+				},
+				"annotations": [],
+				"lastPublishTime": "2026-02-09T16:16:27Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_rest_tfl_lines')]",
+				"[concat(variables('factoryId'), '/datasets/ds_json_tfl_lines')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_error_handler')]",
+				"[concat(variables('factoryId'), '/datasets/ds_rest_tfl_stops')]",
+				"[concat(variables('factoryId'), '/datasets/ds_json_tfl_stops')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_json_tfl_arrivals')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "bus_route_1_arrivals_2026-02-09_14-00-00.json",
+				"linkedServiceName": {
+					"referenceName": "ls_adls_analytics",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"ingestDate": {
+						"type": "string"
+					},
+					"hour": {
+						"type": "string"
+					},
+					"busId": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Sink datasets"
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "bus_line_@{dataset().busId}_arrivals_@{dataset().ingestDate}_@{dataset().hour}.json",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "tfl_arrivals/@{dataset().ingestDate}/@{dataset().hour}",
+							"type": "Expression"
+						},
+						"fileSystem": "landing"
+					}
+				},
+				"schema": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls_analytics')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_json_tfl_lines')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls_analytics",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Sink datasets"
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "line_status.json",
+						"folderPath": "tfl_lines",
+						"fileSystem": "landing"
+					}
+				},
+				"schema": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls_analytics')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_json_tfl_stops')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls_analytics",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"page": {
+						"type": "int"
+					}
+				},
+				"folder": {
+					"name": "Sink datasets"
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "stop_points_page_@{dataset().page}.json",
+							"type": "Expression"
+						},
+						"folderPath": "tfl_stops",
+						"fileSystem": "landing"
+					}
+				},
+				"schema": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls_analytics')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_rest_tfl_arrivals')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_rest_tfl_api",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"busId": {
+						"type": "int"
+					}
+				},
+				"folder": {
+					"name": "Source datasets"
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": {
+						"value": "Line/@{dataset().busId}/Arrivals",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_rest_tfl_api')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_rest_tfl_lines')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_rest_tfl_api",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Source datasets"
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": "Line/Mode/bus/Status"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_rest_tfl_api')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_rest_tfl_stops')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_rest_tfl_api",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"page": {
+						"type": "int"
+					}
+				},
+				"folder": {
+					"name": "Source datasets"
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": {
+						"value": "StopPoint/Mode/bus?page=@{dataset().page}",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_rest_tfl_api')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_adls_analytics')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('ls_adls_analytics_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('ls_adls_analytics_accountKey')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_rest_tfl_api')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('ls_rest_tfl_api_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
