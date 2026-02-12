@@ -184,19 +184,6 @@ The pipeline integrates with Transport for London (TfL) Unified API:
 
 API Documentation: https://api.tfl.gov.uk/
 
-## Development
-
-### Local Development
-
-1. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-2. Set up environment variables for Azure credentials
-
-3. Use Databricks CLI or VSCode integration for notebook development
-
 ### Testing
 
 Run test notebooks in `databricks/test/` to validate transformations and data quality.
@@ -216,17 +203,6 @@ Run test notebooks in `databricks/test/` to validate transformations and data qu
 Environment-specific configurations are maintained in:
 - `config.yaml`
 - `infrastructure/parameters/`
-
-## Contributing
-
-1. Create a feature branch
-2. Make changes and test thoroughly
-3. Submit a pull request with clear description
-4. Ensure all tests pass and code follows project conventions
-
-## License
-
-[Add appropriate license information]
 
 ## Support
 
