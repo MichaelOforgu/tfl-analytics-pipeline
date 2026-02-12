@@ -1,0 +1,49 @@
+dev:
+  catalog: tfl_dev
+  
+  schemas:
+    bronze: bronze
+    silver: silver
+    gold: gold
+  
+  storage:
+    account_name: sttfldevi7eucd5ne5qf4
+    storage_credential: dev_adls_credential
+    
+    external_locations:
+      landing: landing_location
+      bronze: bronze_landing
+      silver: silver_landing
+      gold: gold_landing
+    
+    containers:
+      landing: landing
+      bronze: bronze
+      silver: silver
+      gold: gold
+      checkpoints: checkpoints
+
+prod:
+  catalog: tfl_prod
+  
+  schemas:
+    bronze: bronze
+    silver: silver
+    gold: gold
+  
+  storage:
+    account_name: 
+    storage_credential: prod_adls_credential
+    
+    external_locations:
+      landing: landing_location
+      bronze: bronze_landing
+      silver: silver_landing
+      gold: gold_landing
+    
+    containers:
+      landing: landing
+      bronze: bronze
+      silver: silver
+      gold: gold
+      checkpoints: checkpoints
