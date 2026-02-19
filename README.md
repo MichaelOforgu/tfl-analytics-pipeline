@@ -20,6 +20,8 @@ This project implements an end-to-end data pipeline that:
 
 ### Medallion Architecture
 
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/b1c720d8-39d3-45d3-aa43-fa6499c9463f" />
+
 ```
 TfL API → ADF → Landing → Bronze → Silver → Gold
                  (Raw)    (Clean)  (Enriched) (Aggregated)
@@ -204,9 +206,6 @@ Environment-specific configurations are maintained in:
 - `config.yaml`
 - `infrastructure/parameters/`
 
-## Support
-
-For issues or questions, please open an issue in the repository.
 
 ## Acknowledgments
 
