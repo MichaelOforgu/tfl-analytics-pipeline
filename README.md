@@ -123,3 +123,25 @@ For an industry-standard next step, consider converting these checks into:
 - CI integration (GitHub Actions) for repeatable verification
 
 ---
+
+## Project Screenshots
+
+![WhatsApp Image 2026-02-19 at 09 10 47 (1)](https://github.com/user-attachments/assets/dd83c7e2-b694-40a6-bdaa-e8ac9f631540)
+
+
+
+![WhatsApp Image 2026-02-19 at 09 10 47 (2)](https://github.com/user-attachments/assets/3e59aa93-77a7-496a-bd5a-ea25ea3c9fbb)
+
+
+
+![WhatsApp Image 2026-02-19 at 09 10 47](https://github.com/user-attachments/assets/2ea8db6d-d323-440b-9057-009f41d586d8)
+
+
+
+<img width="1588" height="756" alt="Screenshot 2026-02-12 at 15 01 57" src="https://github.com/user-attachments/assets/91785ae2-dc73-4f2f-9fde-aca46cd04f1a" />
+
+
+
+![WhatsApp Image 2026-02-19 at 09 26 07](https://github.com/user-attachments/assets/5d2bc0aa-abe0-440a-90d6-08905fddf789)
+
+
